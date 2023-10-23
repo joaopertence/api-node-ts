@@ -4,16 +4,18 @@ import objectHash from 'object-hash';
 
 const app = express();
 const port = 3000;
+
+// Tempo cache 1 hora
 const cache = new NodeCache({stdTTL: 60 * 60, checkperiod: 0});
 
-interface DadosIniciais {
+interface IDadosIniciais {
   pessoas: { id: number; nome: string }[];
   carros: { id: number; modelo: string }[];
   animais: { id: number; nome: string }[];
 }
 
 // Dados iniciais em cache
-const dadosIniciais: DadosIniciais = {
+const dadosIniciais: IDadosIniciais = {
   pessoas: [{ id: 1, nome: "Marcelo" }, { id: 2, nome: "João" }, { id: 3, nome: "Maria" }],
   carros: [{ id: 1, modelo: "Fusca" }, { id: 2, modelo: "Gol" }, { id: 3, modelo: "Palio" }],
   animais: [{ id: 1, nome: "Cachorro" }, { id: 2, nome: "Gato" }, { id: 3, nome: "Papagaio" }],
@@ -23,15 +25,20 @@ const dadosIniciais: DadosIniciais = {
 const hashDadosIniciais = objectHash.sha1(dadosIniciais);
 
 // Armazene os dados iniciais em cache com um ETag com base no hash
-cache.set<DadosIniciais>('cachedData', dadosIniciais);
+cache.set<IDadosIniciais>('cachedData', dadosIniciais);
 cache.set('cachedDataETag', hashDadosIniciais);
 
 app.use(express.json());
 
-// Função para obter um tipo de dados específico (pessoas, carros, animais)
-function getDataType(dataType: keyof DadosIniciais) {
+/**
+ * Função para obter um tipo de dados específico (pessoas, carros, animais)
+ * keyof extrai todas as chaves (nomes de propriedades) do tipo de dado 
+ * @param dataType IDadosIniciais
+ * @returns Type "pessoas" ou "carros" ou "animais"
+ */
+function getDataType(dataType: keyof IDadosIniciais) {
   return (req: express.Request, res: express.Response) => {
-    const cachedData = cache.get<DadosIniciais>('cachedData');
+    const cachedData = cache.get<IDadosIniciais>('cachedData');
     
     if (!cachedData || !cachedData[dataType]) {
       res.status(404).json({ error: 'Dados não encontrados' });
@@ -42,7 +49,7 @@ function getDataType(dataType: keyof DadosIniciais) {
   };
 }
 
-// Rota para obter todos os dados em cache (Solicitação GET)
+// GET: Rota para obter todos os dados em cache (Solicitação GET)
 app.get('/data', (req, res) => {
   // Obtenha o ETag dos dados em cache
   const cachedDataETag = cache.get('cachedDataETag');
@@ -60,7 +67,7 @@ app.get('/data', (req, res) => {
       res.status(304).end();
     } else {
       // Dados em cache estão desatualizados
-      const cachedData = cache.get<DadosIniciais>('cachedData');
+      const cachedData = cache.get<IDadosIniciais>('cachedData');
 
       // Atualize o cabeçalho ETag com a nova versão de hash
       res.setHeader('ETag', String(cachedDataETag));
@@ -69,14 +76,14 @@ app.get('/data', (req, res) => {
   }
 });
 
-// Rota para atualizar os dados em cache (Solicitação PUT)
+// PUT: Rota para atualizar os dados em cache (Solicitação PUT)
 app.put('/data', (req, res) => {
-  const updatedData: DadosIniciais = req.body;
+  const updatedData: IDadosIniciais = req.body;
 
   if (updatedData) {
     // Atualize os dados em cache
     const updatedDataHash = objectHash.sha1(updatedData);
-    cache.set<DadosIniciais>('cachedData', updatedData);
+    cache.set<IDadosIniciais>('cachedData', updatedData);
     cache.set('cachedDataETag', updatedDataHash);
 
     res.status(200).json({ message: 'Dados atualizados com sucesso' });
@@ -87,15 +94,19 @@ app.put('/data', (req, res) => {
 
 // PONTO EXTRA:
 
-// Rota para obter um tipo de dados específico
+// GET: Rota para obter pessoas
 app.get('/pessoas', getDataType('pessoas'));
+
+// GET: Rota para obter carros
 app.get('/carros', getDataType('carros'));
+
+// GET: Rota para obter animais
 app.get('/animais', getDataType('animais'));
 
-// Rota para obter pessoa by ID
+// GET: Rota para obter pessoa by ID
 app.get('/pessoas/:id', (req, res) => {
   const id = parseInt(req.params.id);
-  const cachedData = cache.get<DadosIniciais>('cachedData');
+  const cachedData = cache.get<IDadosIniciais>('cachedData');
 
   if (!cachedData || !cachedData.pessoas) {
     res.status(404).json({ error: 'Dados não encontrados' });
@@ -109,10 +120,10 @@ app.get('/pessoas/:id', (req, res) => {
   }
 });
 
-// Rota para obter carro by ID
+// GET: Rota para obter carro by ID
 app.get('/carros/:id', (req, res) => {
   const id = parseInt(req.params.id);
-  const cachedData = cache.get<DadosIniciais>('cachedData');
+  const cachedData = cache.get<IDadosIniciais>('cachedData');
 
   if (!cachedData || !cachedData.carros) {
     res.status(404).json({ error: 'Dados não encontrados' });
@@ -126,10 +137,10 @@ app.get('/carros/:id', (req, res) => {
   }
 });
 
-// Rota para obter animal by ID
+// GET: Rota para obter animal by ID
 app.get('/animais/:id', (req, res) => {
   const id = parseInt(req.params.id);
-  const cachedData = cache.get<DadosIniciais>('cachedData');
+  const cachedData = cache.get<IDadosIniciais>('cachedData');
   
   if (!cachedData || !cachedData.animais) {
     res.status(404).json({ error: 'Dados não encontrados' });
