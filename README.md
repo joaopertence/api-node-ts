@@ -44,3 +44,10 @@ npm install --save-dev @types/object-hash
 ```
 npm start
 ```
+
+## Projeto publicado na plataforma Replit:
+[replit.com/](https://replit.com/)
+
+Link API:
+
+[https://api-node-ts.joaopertence22.repl.co/data](https://api-node-ts.joaopertence22.repl.co/data)
